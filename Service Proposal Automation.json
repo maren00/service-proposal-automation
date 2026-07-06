@@ -1,0 +1,261 @@
+{
+  "name": "Service Proposal Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "command": "pandoc \"/files/service_proposals/Service Proposal_Storydata.docx\" -t plain"
+      },
+      "id": "a6474715-29cc-4c10-a4fa-4691fe4bfaa7",
+      "name": "Extract text (pandoc)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const proposalText = $json.stdout || '';\n\nconst SYSTEM_PROMPT = \"You are acting as a Senior AI Engineer reviewing an AI Factory Service Proposal before it is sent to the client.\\n\\nYour role is NOT to redesign the proposal, create a consultancy plan, or provide exhaustive technical analysis.\\n\\nYour task is to provide a SHORT and EXECUTIVE-LEVEL REVIEW focused on whether the proposal is:\\n- Realistic\\n- Coherent\\n- Achievable within 30 consultancy hours\\n- Properly aligned with AI Factory expertise areas\\n- Appropriate for non-technical stakeholders\\n\\nIMPORTANT CONTEXT:\\n- This is a consultancy/orientation service only.\\n- No implementation, coding, scripting, deployment, infrastructure setup, or production development will be performed.\\n- The work will be carried out by an Expert Domain Consultant.\\n- The proposal is mainly intended for stakeholders with AI/business knowledge but not necessarily technical expertise.\\n\\nAI FACTORY EXPERTISE AREAS:\\n- Machine Learning\\n- Computer Vision\\n- NLP\\n- Generative AI\\n- Agentic AI\\n- Trustworthy AI\\n- Drug Discovery\\n- Healthcare AI\\n- Protein/DNA AI\\n- Earth Sciences\\n- Language Technologies\\n\\nREVIEW OBJECTIVE:\\nProvide ONLY 2 to 5 concise and high-impact recommendations that improve:\\n- Scope clarity\\n- Realism\\n- Consultancy framing\\n- Language precision\\n- Alignment with AI Factory capabilities\\n\\nThe review must remain SHORT.\\nThe final output should NEVER exceed 2 pages.\\n\\nDO NOT:\\n- Generate a consultancy plan\\n- Rewrite the entire proposal\\n- Produce long technical explanations\\n- Suggest implementation architectures\\n- Create timelines\\n- Expand the project scope\\n\\nINSTEAD:\\nFocus on small but important corrections such as:\\n- Removing unrealistic claims\\n- Rephrasing implementation-oriented language\\n- Clarifying consultancy limitations\\n- Simplifying overly technical wording\\n- Reducing ambiguity\\n- Adjusting expectations\\n- Aligning terminology with AI Factory expertise\\n\\nOUTPUT FORMAT:\\n\\n# Overall Assessment\\n(1 short paragraph)\\n\\n# Suggested Changes\\nProvide 2\\u20135 concise recommendations.\\n\\nFor each recommendation:\\n- Quote or summarize the problematic statement\\n- Explain briefly why it should be changed\\n- Provide a suggested replacement or adjustment\\n\\n# Final Reviewer Recommendation\\nChoose one:\\n- Approved\\n- Approved with minor changes\\n- Needs revision before approval\\n\\nIMPORTANT:\\nBe concise, executive-level, practical, and realistic.\\nAct as an internal reviewer giving approval before delivery to the client.\";\n\nconst LATEX_INSTRUCTIONS = \"IMPORTANT OUTPUT INSTRUCTIONS:\\nReturn ONLY a complete, self-contained LaTeX document (no explanations, no commentary, no markdown, no code fences).\\nFill the <...> placeholders in the template below, keeping the preamble unchanged.\\nUse 2 to 5 items in \\\"Suggested Changes\\\", each with a bold lead-in, a brief justification and a \\\\suggested{replacement}{...} or \\\\suggested{adjustment}{...} line.\\nEscape LaTeX special characters in any quoted text: % & _ # $ and use `` '' for quotation marks.\\nOutput nothing before \\\\documentclass or after \\\\end{document}.\\n\\nTEMPLATE:\\n\\\\documentclass[11pt]{article}\\n\\\\usepackage[margin=2.5cm]{geometry}\\n\\\\usepackage[T1]{fontenc}\\n\\\\usepackage[utf8]{inputenc}\\n\\\\usepackage{enumitem}\\n\\\\usepackage{parskip}\\n\\\\usepackage{titlesec}\\n\\\\titleformat{\\\\section}{\\\\normalfont\\\\large\\\\bfseries}{}{0pt}{}\\n\\\\titlespacing{\\\\section}{0pt}{1.1em}{0.4em}\\n\\\\setlist[itemize]{leftmargin=1.4em, itemsep=0.7em, topsep=0.3em}\\n\\\\newcommand{\\\\suggested}[2]{\\\\par\\\\smallskip\\\\textit{Suggested #1:} #2}\\n\\\\begin{document}\\n\\\\thispagestyle{plain}\\n{\\\\LARGE\\\\bfseries Service Proposal Review}\\\\\\\\[2pt]\\n{\\\\large Storydata}\\\\\\\\[10pt]\\n\\\\section*{Overall Assessment}\\n<ONE SHORT PARAGRAPH>\\n\\\\section*{Suggested Changes}\\n\\\\begin{itemize}\\n  \\\\item \\\\textbf{<Short problem lead-in.>} <Why it should change.>\\n  \\\\suggested{replacement}{<suggested text>}\\n\\\\end{itemize}\\n\\\\section*{Final Reviewer Recommendation}\\n<Approved | Approved with minor changes | Needs revision before approval>\\n\\\\end{document}\";\n\nconst filename = \"Service_Proposal_Storydata\";\n\nconst fullPrompt = SYSTEM_PROMPT + \"\\n\\n---\\n\\nHere is the proposal:\\n\\n\" + proposalText + \"\\n\\n---\\n\\n\" + LATEX_INSTRUCTIONS;\n\nreturn [{ json: { prompt: fullPrompt, filename } }];"
+      },
+      "id": "59f643ff-6776-4ec2-b6ca-2217e72164ac",
+      "name": "Build prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    contents: [\n      {\n        parts: [\n          {\n            text: $json.prompt\n          }\n        ]\n      }\n    ],\n    generationConfig: {\n      temperature: 0.2\n    }\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        0
+      ],
+      "id": "212e0575-55af-4b1e-92bc-293654049a5c",
+      "name": "LLM Request",
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "6cxcKHcebOy3l9QG",
+          "name": "Gemini API"
+        }
+      },
+      "notes": "Gemini"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $json.candidates?.[0]?.content?.parts?.[0]?.text || '';\n\ntext = text\n  .replace(/^```(?:latex|tex)?\\s*/i, '')\n  .replace(/```\\s*$/i, '')\n  .trim();\n\nconst start = text.indexOf('\\\\documentclass');\nconst end = text.lastIndexOf('\\\\end{document}');\n\nif (start >= 0 && end > start) {\n  text = text.substring(start, end + '\\\\end{document}'.length);\n}\n\nif (text.indexOf('\\\\documentclass') < 0 || text.indexOf('\\\\end{document}') < 0) {\n  throw new Error('Response does not contain a valid LaTeX document. Received: ' + text.substring(0, 100));\n}\n\nconst filename = $('Build prompt').item.json.filename;\n\nreturn [\n  {\n    json: {\n      tex: text,\n      filename\n    }\n  }\n];"
+      },
+      "id": "b5827358-8c26-4f74-8fe8-15ad3e906746",
+      "name": "Clean LaTeX",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "tex",
+        "options": {
+          "fileName": "review.tex"
+        }
+      },
+      "id": "af13ba3e-e2ed-4667-8e0c-5ca948f0410f",
+      "name": "Text to file",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/files/service_proposals/tmp/{{ $('Clean LaTeX').item.json.filename }}.tex",
+        "options": {}
+      },
+      "id": "0c645cda-c0d3-44ff-baf1-7c4b99467592",
+      "name": "Write .tex",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1328,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=cd /files/service_proposals/tmp && tectonic {{ $('Clean LaTeX').item.json.filename }}.tex"
+      },
+      "id": "edb7ece2-56fa-4909-a8d2-f969a7b15333",
+      "name": "Compile (pdflatex)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/files/service_proposals/tmp/{{ $('Clean LaTeX').item.json.filename }}.pdf",
+        "options": {}
+      },
+      "id": "259941ba-319a-40a3-a6f5-7ff2575c87d3",
+      "name": "Read generated PDF",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "16fbc5cd-1a5b-4ece-940f-1e448b94110f",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract text (pandoc)": {
+      "main": [
+        [
+          {
+            "node": "Build prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build prompt": {
+      "main": [
+        [
+          {
+            "node": "LLM Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Request": {
+      "main": [
+        [
+          {
+            "node": "Clean LaTeX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean LaTeX": {
+      "main": [
+        [
+          {
+            "node": "Text to file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text to file": {
+      "main": [
+        [
+          {
+            "node": "Write .tex",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write .tex": {
+      "main": [
+        [
+          {
+            "node": "Compile (pdflatex)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile (pdflatex)": {
+      "main": [
+        [
+          {
+            "node": "Read generated PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read generated PDF": {
+      "main": [
+        []
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Extract text (pandoc)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1e606701-7742-4a53-9e4b-0a56af1569ba",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "755dc7c72ce9f111d874fcfd78ed7b18d3fc9a27b93ce201de5df5925df3af70"
+  },
+  "nodeGroups": [],
+  "id": "MZ5iMM8PFDZjBfKK",
+  "tags": []
+}
